@@ -1,0 +1,1729 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>请假申请截图生成器</title>
+<style>
+  :root {
+    --ui-blue: #3d7df5;
+    --ui-blue-deep: #2e6ae0;
+    --ui-bg: #eef2f8;
+    --ui-panel: #ffffff;
+    --ui-text: #1c2430;
+    --ui-muted: #7b8696;
+    --ui-line: #e7ebf2;
+    --ui-field: #fbfcfe;
+    --ui-ring: rgba(61, 125, 245, .16);
+    --shadow: 0 24px 70px rgba(29, 49, 82, .16), 0 3px 12px rgba(29, 49, 82, .05);
+    --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    min-height: 100%;
+    color: var(--ui-text);
+    background: var(--ui-bg);
+    font-family: var(--font-ui);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  button, input, select, textarea { font: inherit; }
+  button { cursor: pointer; }
+  button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+    outline: none;
+    border-color: var(--ui-blue) !important;
+    box-shadow: 0 0 0 3px var(--ui-ring) !important;
+  }
+
+  .app {
+    display: flex;
+    height: 100dvh;
+    min-height: 0;
+  }
+
+  /* ---------------- Editor ---------------- */
+
+  .panel {
+    width: 442px;
+    flex: 0 0 442px;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--ui-panel);
+    border-right: 1px solid rgba(28, 44, 70, .08);
+    box-shadow: 8px 0 36px rgba(30, 48, 80, .035);
+    z-index: 2;
+  }
+
+  .panel-head {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 20px 16px;
+    border-bottom: 1px solid var(--ui-line);
+    background: rgba(255, 255, 255, .96);
+  }
+
+  .brand-mark {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    border-radius: 12px;
+    background: linear-gradient(145deg, #5b96ff 0%, #3376f2 66%, #2a63d6 100%);
+    display: grid;
+    place-items: center;
+    color: #fff;
+    box-shadow: 0 7px 16px rgba(61, 125, 245, .26);
+  }
+
+  .brand-mark svg { width: 20px; height: 20px; display: block; }
+
+  .brand-copy { min-width: 0; flex: 1 1 auto; }
+  .brand-copy h1 {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.35;
+    font-weight: 750;
+    letter-spacing: .01em;
+    color: #172130;
+  }
+  .brand-copy p {
+    margin: 3px 0 0;
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--ui-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .icon-btn {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--ui-line);
+    border-radius: 9px;
+    background: #fff;
+    color: #748094;
+    display: grid;
+    place-items: center;
+    transition: .16s ease;
+  }
+  .icon-btn:hover { color: var(--ui-blue); border-color: #c9dafd; background: #f7faff; }
+  .icon-btn svg { width: 15px; height: 15px; display: block; }
+
+  .panel-body {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 3px 20px 24px;
+    scrollbar-width: thin;
+    scrollbar-color: #d6ddea transparent;
+  }
+  .panel-body::-webkit-scrollbar { width: 6px; }
+  .panel-body::-webkit-scrollbar-thumb { background: #d6ddea; border-radius: 99px; }
+  .panel-body::-webkit-scrollbar-track { background: transparent; }
+
+  .group { padding: 17px 0 18px; border-bottom: 1px solid #edf0f5; }
+  .group:last-child { border-bottom: 0; }
+  .group-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 13px;
+  }
+  .group-head::before {
+    content: "";
+    width: 3px;
+    height: 13px;
+    border-radius: 4px;
+    background: var(--ui-blue);
+    box-shadow: 0 0 0 3px rgba(61, 125, 245, .08);
+  }
+  .group-head h2 {
+    margin: 0;
+    font-size: 12.5px;
+    font-weight: 750;
+    letter-spacing: .02em;
+    color: #273246;
+  }
+  .group-head .group-tag {
+    margin-left: auto;
+    padding: 2px 7px;
+    border-radius: 99px;
+    background: #f2f6ff;
+    font-size: 10px;
+    font-weight: 650;
+    color: #5d83cf;
+    letter-spacing: .01em;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 11px 11px;
+  }
+  .span-2 { grid-column: 1 / -1; }
+
+  .field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+  .field > span {
+    font-size: 10.5px;
+    font-weight: 650;
+    letter-spacing: .02em;
+    color: #7c8797;
+    line-height: 1.2;
+  }
+  .field input,
+  .field select,
+  .field textarea {
+    width: 100%;
+    min-width: 0;
+    border: 1px solid #e3e9f2;
+    border-radius: 8px;
+    background: var(--ui-field);
+    color: #283447;
+    font-size: 12.5px;
+    line-height: 1.35;
+    transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+  }
+  .field input, .field select { height: 35px; padding: 0 10px; }
+  .field select {
+    appearance: none;
+    padding-right: 27px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='none' stroke='%23818d9f' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+  }
+  .field textarea {
+    min-height: 66px;
+    resize: vertical;
+    padding: 9px 10px;
+    line-height: 1.55;
+  }
+  .field input:hover, .field select:hover, .field textarea:hover { border-color: #d1dae7; }
+  .field input::placeholder, .field textarea::placeholder { color: #b4bdc9; }
+  .field input[readonly] {
+    color: #53647c;
+    background: #f4f7fb;
+    border-color: #e7ecf3;
+    cursor: default;
+  }
+  .field input[readonly]:hover { border-color: #e7ecf3; }
+  .auto-tag {
+    display: inline-block;
+    margin-left: 3px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: #edf4ff;
+    color: #4b7edc;
+    font-style: normal;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1.5;
+    vertical-align: 1px;
+  }
+  .auto-indicator {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #5f8adf;
+    font-size: 10px;
+    font-weight: 650;
+    white-space: nowrap;
+  }
+  .auto-indicator::before {
+    content: "";
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #5b91f0;
+  }
+
+  .helper-row {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: -2px;
+    min-height: 17px;
+  }
+  .helper {
+    font-size: 10px;
+    color: #98a2b1;
+    line-height: 1.4;
+  }
+  .inline-btn {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    color: #4a7fe6;
+    font-size: 10.5px;
+    font-weight: 650;
+    line-height: 1.4;
+    margin-left: auto;
+    white-space: nowrap;
+  }
+  .inline-btn:hover { color: var(--ui-blue-deep); text-decoration: underline; text-underline-offset: 2px; }
+
+  .panel-foot {
+    flex: 0 0 auto;
+    padding: 13px 20px 16px;
+    border-top: 1px solid var(--ui-line);
+    background: rgba(255, 255, 255, .97);
+    box-shadow: 0 -8px 24px rgba(31, 52, 86, .035);
+  }
+  .privacy-note {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 10px;
+    color: #909bab;
+    font-size: 10px;
+    line-height: 1.4;
+  }
+  .privacy-note svg { width: 12px; height: 12px; flex: 0 0 auto; color: #78a0e8; }
+  .action-row { display: flex; gap: 9px; }
+  .btn {
+    border: 1px solid transparent;
+    border-radius: 9px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: .01em;
+    transition: transform .14s ease, box-shadow .16s ease, background .16s ease, border-color .16s ease;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn svg { width: 16px; height: 16px; flex: 0 0 auto; }
+  .btn-primary {
+    flex: 1 1 auto;
+    color: #fff;
+    background: linear-gradient(180deg, #4c89fb, #3477ee);
+    border-color: #2f6fe2;
+    box-shadow: 0 7px 18px rgba(52, 119, 238, .24), inset 0 1px 0 rgba(255, 255, 255, .22);
+  }
+  .btn-primary:hover { background: linear-gradient(180deg, #5a93ff, #2d6fe7); box-shadow: 0 9px 22px rgba(52, 119, 238, .3); }
+  .btn-secondary {
+    flex: 0 0 108px;
+    color: #4f5e73;
+    background: #fff;
+    border-color: #dfe6f0;
+  }
+  .btn-secondary:hover { border-color: #cbdaf4; background: #f8fbff; color: #2f6fe2; }
+
+  /* ---------------- Preview ---------------- */
+
+  .preview-pane {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    background:
+      radial-gradient(circle at 12% 6%, rgba(122, 161, 232, .16), transparent 30%),
+      radial-gradient(circle at 92% 92%, rgba(104, 133, 183, .12), transparent 32%),
+      #eef2f8;
+    overflow: hidden;
+  }
+  .preview-pane::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: .27;
+    background-image: radial-gradient(rgba(75, 101, 139, .28) .7px, transparent .7px);
+    background-size: 18px 18px;
+    mask-image: linear-gradient(115deg, #000, transparent 42%, transparent 58%, #000);
+  }
+
+  .preview-head {
+    position: relative;
+    z-index: 1;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 28px 0;
+  }
+  .preview-title { display: flex; align-items: center; gap: 10px; }
+  .preview-title .live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #36b878;
+    box-shadow: 0 0 0 4px rgba(54, 184, 120, .13);
+  }
+  .preview-title strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 750;
+    color: #263247;
+    line-height: 1.3;
+  }
+  .preview-title span {
+    display: block;
+    margin-top: 2px;
+    font-size: 10.5px;
+    color: #7e8b9d;
+    line-height: 1.4;
+  }
+  .size-chip {
+    display: inline-flex;
+    align-items: center;
+    height: 26px;
+    padding: 0 10px;
+    border: 1px solid rgba(151, 169, 196, .3);
+    border-radius: 99px;
+    background: rgba(255, 255, 255, .6);
+    color: #718096;
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .02em;
+    white-space: nowrap;
+    backdrop-filter: blur(8px);
+  }
+
+  .preview-stage {
+    position: relative;
+    z-index: 1;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px 28px 10px;
+  }
+
+  .canvas-shell {
+    position: relative;
+    width: min(472px, calc((100dvh - 164px) * var(--shot-ratio, .4609375)), 100%);
+    aspect-ratio: var(--shot-aspect, 472 / 1024);
+    overflow: hidden;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: var(--shadow);
+    outline: 1px solid rgba(37, 55, 81, .07);
+    outline-offset: -1px;
+  }
+  .canvas-shell::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .28);
+  }
+  #screenshot {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: #f4f5f7;
+  }
+
+  .preview-foot {
+    position: relative;
+    z-index: 1;
+    flex: 0 0 auto;
+    padding: 0 28px 18px;
+    text-align: center;
+    color: #8996a8;
+    font-size: 10px;
+    line-height: 1.5;
+  }
+  .preview-foot b { font-weight: 650; color: #68778c; }
+
+  /* Mobile navigation and fixed action bar are only used on narrow screens. */
+  .mobile-tabbar,
+  .mobile-actionbar { display: none; }
+
+  /* ---------------- Toast ---------------- */
+
+  .toast {
+    position: fixed;
+    z-index: 30;
+    left: 50%;
+    bottom: 28px;
+    max-width: min(90vw, 360px);
+    padding: 10px 16px;
+    border-radius: 10px;
+    background: rgba(24, 34, 48, .93);
+    color: #fff;
+    font-size: 12px;
+    line-height: 1.4;
+    box-shadow: 0 12px 34px rgba(18, 30, 48, .24);
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, 8px);
+    transition: opacity .2s ease, transform .2s ease;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (max-width: 1080px) {
+    .panel { width: 408px; flex-basis: 408px; }
+    .preview-head { padding-left: 20px; padding-right: 20px; }
+    .preview-stage { padding-left: 20px; padding-right: 20px; }
+    .preview-foot { padding-left: 20px; padding-right: 20px; }
+  }
+
+  @media (max-width: 860px) {
+    html, body { height: 100%; }
+    body {
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+      background: #f5f8fc;
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 100%;
+      height: 100vh;
+      height: 100dvh;
+      min-height: 0;
+      overflow-x: clip;
+    }
+
+    .mobile-tabbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 0 0 auto;
+      width: 100%;
+      min-width: 0;
+      min-height: 50px;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, .98);
+      border-bottom: 1px solid var(--ui-line);
+      box-shadow: 0 3px 14px rgba(33, 53, 83, .035);
+      z-index: 6;
+    }
+
+    .mobile-brand {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+      color: #1d2a3c;
+      font-size: 12px;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+
+    .mobile-brand-mark {
+      display: grid;
+      place-items: center;
+      width: 23px;
+      height: 23px;
+      flex: 0 0 23px;
+      border-radius: 7px;
+      color: #fff;
+      background: linear-gradient(145deg, #5b96ff 0%, #3376f2 68%, #2a63d6 100%);
+      box-shadow: 0 4px 10px rgba(61, 125, 245, .2);
+    }
+    .mobile-brand-mark svg { width: 13px; height: 13px; display: block; }
+
+    .mobile-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2px;
+      width: min(178px, 48vw);
+      margin-left: auto;
+      padding: 3px;
+      border-radius: 9px;
+      background: #eef3fa;
+    }
+
+    .mobile-tab {
+      height: 32px;
+      padding: 0 9px;
+      border: 0;
+      border-radius: 7px;
+      background: transparent;
+      color: #78859a;
+      font-size: 12px;
+      font-weight: 700;
+      transition: color .16s ease, background .16s ease, box-shadow .16s ease;
+    }
+    .mobile-tab.is-active {
+      color: #2f6fe2;
+      background: #fff;
+      box-shadow: 0 1px 5px rgba(43, 71, 118, .12);
+    }
+
+    .mobile-reset {
+      width: 32px;
+      height: 32px;
+      flex: 0 0 32px;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      border: 1px solid var(--ui-line);
+      border-radius: 9px;
+      background: #fff;
+      color: #748094;
+    }
+    .mobile-reset:active { background: #f4f8ff; color: var(--ui-blue); }
+    .mobile-reset svg { width: 15px; height: 15px; display: block; }
+
+    .panel {
+      width: 100%;
+      max-width: 100%;
+      height: auto;
+      min-width: 0;
+      min-height: 0;
+      flex: 1 1 auto;
+      border-right: 0;
+      border-bottom: 0;
+      box-shadow: none;
+    }
+    .panel-head { display: none; }
+    .panel-body {
+      flex: 1 1 auto;
+      min-height: 0;
+      width: 100%;
+      padding: 2px 16px 22px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+    .panel-foot { display: none; }
+
+    .field > span { font-size: 11.5px; }
+    .field input, .field select {
+      height: 44px;
+      padding: 0 11px;
+      font-size: 16px;
+      border-radius: 9px;
+    }
+    .field textarea {
+      min-height: 86px;
+      padding: 11px;
+      font-size: 16px;
+      border-radius: 9px;
+    }
+    .helper-row { flex-wrap: wrap; row-gap: 4px; }
+    .helper, .auto-indicator { font-size: 10.5px; }
+    .group { padding-top: 18px; padding-bottom: 19px; }
+    .group-head { margin-bottom: 14px; }
+    .group-head h2 { font-size: 14px; }
+
+    .preview-pane {
+      display: none;
+      width: 100%;
+      height: auto;
+      min-height: 0;
+      flex: 1 1 auto;
+      background:
+        radial-gradient(circle at 12% 6%, rgba(122, 161, 232, .15), transparent 32%),
+        radial-gradient(circle at 92% 92%, rgba(104, 133, 183, .11), transparent 34%),
+        #edf2f9;
+    }
+    body[data-mobile-view="preview"] .panel { display: none; }
+    body[data-mobile-view="preview"] .preview-pane { display: flex; }
+
+    .preview-head,
+    .preview-foot { display: none; }
+
+    .preview-stage {
+      flex: 1 1 auto;
+      min-height: 0;
+      padding: 10px 14px 8px;
+    }
+
+    .canvas-shell {
+      width: min(100%, calc((100dvh - 162px - env(safe-area-inset-bottom, 0px)) * var(--shot-ratio, .4609375)));
+      border-radius: 12px;
+      box-shadow: 0 18px 42px rgba(29, 49, 82, .17), 0 2px 8px rgba(29, 49, 82, .06);
+    }
+
+    .mobile-actionbar {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      flex: 0 0 auto;
+      padding: 7px 14px calc(9px + env(safe-area-inset-bottom, 0px));
+      background: rgba(255, 255, 255, .985);
+      border-top: 1px solid var(--ui-line);
+      box-shadow: 0 -8px 24px rgba(31, 52, 86, .045);
+      backdrop-filter: blur(10px);
+      z-index: 6;
+    }
+
+    .mobile-export-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 0 2px;
+      color: #8b97a8;
+      font-size: 9.5px;
+      line-height: 1.4;
+    }
+    .mobile-export-meta b {
+      color: #5f7087;
+      font-weight: 650;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .mobile-actionbar .action-row { display: flex; gap: 8px; }
+    .mobile-actionbar .btn { height: 42px; }
+    .mobile-actionbar .btn-secondary { flex: 0 0 102px; }
+
+    .toast {
+      bottom: calc(102px + env(safe-area-inset-bottom, 0px));
+      font-size: 12px;
+    }
+  }
+
+  @media (max-width: 540px) {
+    .panel-body { padding-left: 15px; padding-right: 15px; }
+    .grid { grid-template-columns: 1fr; gap: 10px; }
+    .span-2, .helper-row { grid-column: auto; }
+    .helper-row { margin-top: 0; }
+    .mobile-brand { font-size: 11.5px; }
+    .mobile-tabs { width: min(164px, 47vw); }
+    .preview-stage { padding-left: 12px; padding-right: 12px; }
+  }
+
+  @media (max-width: 355px) {
+    .mobile-brand > span:last-child { display: none; }
+    .mobile-tabs { width: min(178px, 58vw); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: .001ms !important; animation-duration: .001ms !important; }
+  }
+</style>
+</head>
+<body data-mobile-view="edit">
+<div class="app">
+  <nav class="mobile-tabbar" aria-label="移动端工具栏">
+    <div class="mobile-brand">
+      <span class="mobile-brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M6.5 3.75h8.25L18.5 7.5v12.75H6.5V3.75Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+          <path d="M14.5 3.9V7.5h3.65" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+          <path d="m9 13.1 1.8 1.8 3.6-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <span>请假截图</span>
+    </div>
+    <div class="mobile-tabs" role="tablist" aria-label="切换编辑与预览">
+      <button class="mobile-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="editorPanel" data-mobile-tab="edit">编辑</button>
+      <button class="mobile-tab" type="button" role="tab" aria-selected="false" aria-controls="previewPanel" tabindex="-1" data-mobile-tab="preview">预览</button>
+    </div>
+    <button class="mobile-reset" type="button" data-action="reset" aria-label="重置信息" title="重置信息">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M4.9 9.2A7.5 7.5 0 1 1 4.5 14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        <path d="M4.7 4.9v4.8h4.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </nav>
+
+  <aside class="panel" id="editorPanel">
+    <header class="panel-head">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M6.5 3.75h8.25L18.5 7.5v12.75H6.5V3.75Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+          <path d="M14.5 3.9V7.5h3.65" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+          <path d="m9 13.1 1.8 1.8 3.6-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="brand-copy">
+        <h1>请假申请截图生成器</h1>
+        <p>本地离线运行 · 修改信息，实时预览</p>
+      </div>
+      <button class="icon-btn" id="resetBtn" type="button" data-action="reset" title="恢复示例信息" aria-label="恢复示例信息">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M4.9 9.2A7.5 7.5 0 1 1 4.5 14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+          <path d="M4.7 4.9v4.8h4.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </header>
+
+    <div class="panel-body" id="editorForm">
+      <section class="group" aria-labelledby="studentHeading">
+        <div class="group-head">
+          <h2 id="studentHeading">学生基本信息</h2>
+          <span class="group-tag">可编辑</span>
+        </div>
+        <div class="grid">
+          <label class="field">
+            <span>姓名</span>
+            <input type="text" data-bind="student.name" autocomplete="off" spellcheck="false">
+          </label>
+          <label class="field">
+            <span>学号</span>
+            <input type="text" data-bind="student.id" autocomplete="off" spellcheck="false" inputmode="numeric">
+          </label>
+          <label class="field">
+            <span>性别</span>
+            <select data-bind="student.gender">
+              <option value="男">男</option>
+              <option value="女">女</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>学院</span>
+            <input type="text" data-bind="student.college" autocomplete="off" spellcheck="false">
+          </label>
+          <label class="field">
+            <span>专业</span>
+            <input type="text" data-bind="student.major" autocomplete="off" spellcheck="false">
+          </label>
+          <label class="field">
+            <span>班级</span>
+            <input type="text" data-bind="student.className" autocomplete="off" spellcheck="false">
+          </label>
+        </div>
+      </section>
+
+      <section class="group" aria-labelledby="leaveHeading">
+        <div class="group-head">
+          <h2 id="leaveHeading">请假信息</h2>
+          <span class="group-tag">实时同步</span>
+        </div>
+        <div class="grid">
+          <label class="field">
+            <span>请假类型</span>
+            <input type="text" data-bind="leave.type" list="leaveTypeOptions" autocomplete="off" spellcheck="false">
+            <datalist id="leaveTypeOptions">
+              <option value="病假"></option>
+              <option value="事假"></option>
+              <option value="公假"></option>
+              <option value="其他"></option>
+            </datalist>
+          </label>
+          <label class="field">
+            <span>请假去向</span>
+            <input type="text" data-bind="leave.destination" list="leaveDestinationOptions" autocomplete="off" spellcheck="false">
+            <datalist id="leaveDestinationOptions">
+              <option value="不离校"></option>
+              <option value="离校"></option>
+              <option value="回家"></option>
+            </datalist>
+          </label>
+          <label class="field">
+            <span>开始时间</span>
+            <input type="text" data-bind="leave.start" autocomplete="off" spellcheck="false" placeholder="YYYY-MM-DD HH:mm">
+          </label>
+          <label class="field">
+            <span>结束时间</span>
+            <input type="text" data-bind="leave.end" autocomplete="off" spellcheck="false" placeholder="YYYY-MM-DD HH:mm">
+          </label>
+          <div class="helper-row">
+            <span class="helper">时间格式：YYYY-MM-DD HH:mm</span>
+            <span class="auto-indicator">自动计算 · 整小时显示</span>
+          </div>
+          <label class="field">
+            <span>请假时长 <em class="auto-tag">自动</em></span>
+            <input type="text" data-bind="leave.duration" readonly aria-readonly="true" tabindex="-1" title="根据开始和结束时间自动计算，并按整小时四舍五入">
+          </label>
+          <label class="field">
+            <span>紧急联系人</span>
+            <input type="text" data-bind="leave.emergencyName" autocomplete="off" spellcheck="false">
+          </label>
+          <label class="field">
+            <span>紧急联系人电话</span>
+            <input type="text" data-bind="leave.emergencyPhone" autocomplete="off" spellcheck="false" inputmode="tel">
+          </label>
+          <label class="field span-2">
+            <span>请假理由</span>
+            <textarea data-bind="leave.reason" spellcheck="false"></textarea>
+          </label>
+          <label class="field span-2">
+            <span>附件</span>
+            <input type="text" data-bind="leave.attachment" autocomplete="off" spellcheck="false" placeholder="不填则显示为空">
+          </label>
+        </div>
+      </section>
+
+      <section class="group" aria-labelledby="progressHeading">
+        <div class="group-head">
+          <h2 id="progressHeading">办理进度</h2>
+          <span class="group-tag">选填</span>
+        </div>
+        <div class="grid">
+          <label class="field">
+            <span>申请提交时间</span>
+            <input type="text" data-bind="progress.applicationTime" autocomplete="off" spellcheck="false">
+          </label>
+          <label class="field">
+            <span>审核节点</span>
+            <input type="text" data-bind="progress.reviewerTitle" autocomplete="off" spellcheck="false">
+          </label>
+          <label class="field">
+            <span>审核结果</span>
+            <input type="text" data-bind="progress.reviewerStatus" autocomplete="off" spellcheck="false">
+          </label>
+          <label class="field">
+            <span>审核人</span>
+            <input type="text" data-bind="progress.reviewerName" autocomplete="off" spellcheck="false">
+          </label>
+          <label class="field span-2">
+            <span>审核时间</span>
+            <input type="text" data-bind="progress.reviewerTime" autocomplete="off" spellcheck="false">
+          </label>
+        </div>
+      </section>
+    </div>
+
+    <footer class="panel-foot">
+      <p class="privacy-note">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 3.5 19 6v5.4c0 4.1-2.7 7.5-7 9.1-4.3-1.6-7-5-7-9.1V6l7-2.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+          <path d="m9.3 12 1.8 1.8 3.6-3.7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        示例信息均为虚构；所有修改只在当前浏览器中处理。
+      </p>
+      <div class="action-row">
+        <button class="btn btn-primary" type="button" id="downloadBtn" data-action="download">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 4v10.5m0 0 3.7-3.7M12 14.5l-3.7-3.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M5.5 16.8v2.1h13v-2.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          下载 PNG
+        </button>
+        <button class="btn btn-secondary" type="button" id="copyBtn" data-action="copy">复制图片</button>
+      </div>
+    </footer>
+  </aside>
+
+  <main class="preview-pane" id="previewPanel">
+    <div class="preview-head">
+      <div class="preview-title">
+        <span class="live-dot" aria-hidden="true"></span>
+        <div>
+          <strong>实时预览</strong>
+          <span>按当前手机屏幕自适应生成</span>
+        </div>
+      </div>
+      <span class="size-chip" id="sizeChip">944 × 2048 px</span>
+    </div>
+
+    <div class="preview-stage">
+      <div class="canvas-shell">
+        <canvas id="screenshot" width="944" height="2048" aria-label="请假申请详情截图预览"></canvas>
+      </div>
+    </div>
+
+    <p class="preview-foot">
+      导出尺寸 <b id="exportSize">944 × 2048 px</b> · 预览外框与阴影不会出现在图片中
+    </p>
+  </main>
+
+  <footer class="mobile-actionbar">
+    <div class="mobile-export-meta">
+      <span>示例信息为虚构 · 导出尺寸</span>
+      <b id="mobileExportSize">944 × 2048 px</b>
+    </div>
+    <div class="action-row">
+      <button class="btn btn-primary" type="button" data-action="download">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 4v10.5m0 0 3.7-3.7M12 14.5l-3.7-3.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M5.5 16.8v2.1h13v-2.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        下载 PNG
+      </button>
+      <button class="btn btn-secondary" type="button" data-action="copy">复制图片</button>
+    </div>
+  </footer>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const CANVAS_W = 472;
+  const BASE_CANVAS_H = 1024;
+  const DESKTOP_PIXEL_WIDTH = 944;
+  const DESKTOP_PIXEL_HEIGHT = 2048;
+
+  // Layout is authored at 472 design units wide. The mutable height and scale
+  // let the exported canvas match the current phone screen.
+  let CANVAS_H = BASE_CANVAS_H;
+  let SCALE = 2;
+  let activeCanvasProfileKey = "";
+
+  const COLORS = {
+    background: "#f4f5f7",
+    card: "#ffffff",
+    heading: "#191b1e",
+    studentLabel: "#505358",
+    studentValue: "#222428",
+    leaveLabel: "#7d8085",
+    leaveValue: "#33363a",
+    divider: "#ececef",
+    blue: "#3e7df4",
+    link: "#3d7bf3",
+    green: "#25b669",
+    time: "#a3a6ab",
+    name: "#898c91"
+  };
+
+  const FONT_STACK = '"PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", "Source Han Sans SC", "Heiti SC", sans-serif';
+
+  function pad2(value) {
+    return String(value).padStart(2, "0");
+  }
+
+  function formatDateTime(date) {
+    return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+  }
+
+  function dateAtMinutes(day, minutes) {
+    const date = new Date(day.getFullYear(), day.getMonth(), day.getDate());
+    date.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+    return date;
+  }
+
+  function randomInteger(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  function calculateDurationText(startValue, endValue) {
+    const start = parseDateTime(startValue);
+    const end = parseDateTime(endValue);
+    if (!start || !end) return "";
+    const totalMinutes = Math.round((end.getTime() - start.getTime()) / 60000);
+    if (totalMinutes <= 0) return "";
+    return formatDuration(totalMinutes);
+  }
+
+  function buildDefaultState() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    // 当天 04:00–06:00 与 21:00–23:00 之间的随机时间。
+    const startTime = formatDateTime(dateAtMinutes(today, randomInteger(4 * 60, 6 * 60)));
+    const endTime = formatDateTime(dateAtMinutes(today, randomInteger(21 * 60, 23 * 60)));
+
+    // 前一天 18:00–22:00；审核时间保证晚于申请时间，且不晚于 22:00。
+    const applicationMinutes = randomInteger(18 * 60, 22 * 60 - 1);
+    const reviewMinutes = randomInteger(applicationMinutes + 1, 22 * 60);
+    const applicationTime = formatDateTime(dateAtMinutes(yesterday, applicationMinutes));
+    const reviewTime = formatDateTime(dateAtMinutes(yesterday, reviewMinutes));
+
+    return {
+      student: {
+        name: "张三",
+        id: "20240000001",
+        gender: "男",
+        college: "第一临床医学院",
+        major: "临床医学",
+        className: "临床医学24级1班"
+      },
+      leave: {
+        type: "病假",
+        destination: "不离校",
+        start: startTime,
+        end: endTime,
+        duration: calculateDurationText(startTime, endTime),
+        emergencyName: "李四",
+        emergencyPhone: "13800000000",
+        reason: "感冒发热，身体不适，申请休息一天。",
+        attachment: ""
+      },
+      progress: {
+        applicationTime,
+        reviewerTitle: "班主任审核",
+        reviewerStatus: "审核通过",
+        reviewerName: "王老师",
+        reviewerTime: reviewTime
+      }
+    };
+  }
+
+  const canvas = document.getElementById("screenshot");
+  const ctx = canvas.getContext("2d");
+  const editorForm = document.getElementById("editorForm");
+  const toast = document.getElementById("toast");
+  const sizeChip = document.getElementById("sizeChip");
+  const exportSize = document.getElementById("exportSize");
+  const mobileExportSize = document.getElementById("mobileExportSize");
+
+  let state = buildDefaultState();
+  let renderQueued = false;
+  let toastTimer = 0;
+
+  // ---------- helpers ----------
+
+  function getByPath(obj, path) {
+    return path.split(".").reduce((acc, key) => (acc == null ? undefined : acc[key]), obj);
+  }
+
+  function setByPath(obj, path, value) {
+    const keys = path.split(".");
+    const last = keys.pop();
+    const target = keys.reduce((acc, key) => acc[key], obj);
+    target[last] = value;
+  }
+
+  function setFont(size, weight = 400) {
+    ctx.font = `${weight} ${size}px ${FONT_STACK}`;
+  }
+
+  function fillRoundRect(x, y, width, height, radius) {
+    const r = Math.min(radius, width / 2, height / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + width, y, x + width, y + height, r);
+    ctx.arcTo(x + width, y + height, x, y + height, r);
+    ctx.arcTo(x, y + height, x, y, r);
+    ctx.arcTo(x, y, x + width, y, r);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function drawText(text, x, y, options = {}) {
+    const {
+      size = 17,
+      weight = 400,
+      color = COLORS.studentValue,
+      align = "left",
+      baseline = "middle"
+    } = options;
+    setFont(size, weight);
+    ctx.fillStyle = color;
+    ctx.textAlign = align;
+    ctx.textBaseline = baseline;
+    ctx.fillText(String(text ?? ""), x, y);
+  }
+
+  function ellipsizeToWidth(text, maxWidth) {
+    const source = String(text ?? "");
+    if (ctx.measureText(source).width <= maxWidth) return source;
+    const ellipsis = "…";
+    let low = 0;
+    let high = source.length;
+    while (low < high) {
+      const mid = Math.ceil((low + high) / 2);
+      if (ctx.measureText(source.slice(0, mid) + ellipsis).width <= maxWidth) {
+        low = mid;
+      } else {
+        high = mid - 1;
+      }
+    }
+    return source.slice(0, low) + ellipsis;
+  }
+
+  function drawFittedTextRight(text, right, centerY, maxWidth, options = {}) {
+    const {
+      size = 17,
+      minSize = 12,
+      weight = 400,
+      color = COLORS.studentValue
+    } = options;
+    let finalSize = size;
+    setFont(finalSize, weight);
+    while (finalSize > minSize && ctx.measureText(String(text ?? "")).width > maxWidth) {
+      finalSize -= 0.5;
+      setFont(finalSize, weight);
+    }
+    const display = ellipsizeToWidth(String(text ?? ""), maxWidth);
+    ctx.fillStyle = color;
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    ctx.fillText(display, right, centerY);
+  }
+
+  function wrapText(text, maxWidth) {
+    const source = String(text ?? "");
+    if (!source) return [];
+    const result = [];
+    const paragraphs = source.split(/\r?\n/);
+    for (const paragraph of paragraphs) {
+      if (!paragraph) {
+        result.push("");
+        continue;
+      }
+      let line = "";
+      for (const char of paragraph) {
+        const candidate = line + char;
+        if (line && ctx.measureText(candidate).width > maxWidth) {
+          result.push(line);
+          line = char;
+        } else {
+          line = candidate;
+        }
+      }
+      if (line) result.push(line);
+      if (paragraph && line === "") result.push("");
+    }
+    return result.length ? result : [""];
+  }
+
+  function drawHairline(x1, y, x2) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.strokeStyle = COLORS.divider;
+    ctx.lineWidth = 1;
+    ctx.moveTo(x1, y);
+    ctx.lineTo(x2, y);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawSectionHeader(y, title, rightText = "", accent = {}) {
+    const accentX = accent.x ?? 18;
+    const accentY = accent.y ?? y;
+    const accentWidth = accent.width ?? 4.5;
+    const accentHeight = accent.height ?? 18;
+    const accentRadius = accent.radius ?? Math.min(accentWidth / 2, 2.25);
+
+    ctx.fillStyle = COLORS.blue;
+    fillRoundRect(accentX, accentY, accentWidth, accentHeight, accentRadius);
+
+    setFont(19, 700);
+    ctx.fillStyle = COLORS.heading;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText(title, 32, y + 9.2);
+
+    if (rightText) {
+      setFont(16, 400);
+      ctx.fillStyle = COLORS.link;
+      ctx.textAlign = "right";
+      ctx.fillText(rightText, CANVAS_W - 18, y + 9.2);
+    }
+  }
+
+  function drawStudentCard() {
+    const rowTop = 61;
+    const rowHeight = 55;
+    const rows = [
+      ["姓名", state.student.name],
+      ["学号", state.student.id],
+      ["性别", state.student.gender],
+      ["学院", state.student.college],
+      ["专业", state.student.major],
+      ["班级", state.student.className]
+    ];
+
+    ctx.fillStyle = COLORS.card;
+    ctx.fillRect(0, 0, CANVAS_W, STUDENT_CARD_HEIGHT);
+    drawSectionHeader(22, "学生基本信息");
+
+    rows.forEach(([label, value], index) => {
+      const centerY = rowTop + rowHeight * index + rowHeight / 2;
+      drawText(label, 18, centerY, {
+        size: 17,
+        color: COLORS.studentLabel
+      });
+      drawFittedTextRight(value, CANVAS_W - 18, centerY, 336, {
+        size: 17,
+        minSize: 12,
+        color: COLORS.studentValue
+      });
+      if (index < rows.length - 1) {
+        drawHairline(18, rowTop + rowHeight * (index + 1), CANVAS_W - 18);
+      }
+    });
+  }
+
+  function getLeaveRows() {
+    return [
+      { label: "请假类型", value: state.leave.type },
+      { label: "请假去向", value: state.leave.destination },
+      { label: "请假开始时间", value: state.leave.start },
+      { label: "请假结束时间", value: state.leave.end },
+      { label: "请假时长天", value: state.leave.duration },
+      { label: "紧急联系人", value: state.leave.emergencyName },
+      { label: "紧急联系人电话", value: state.leave.emergencyPhone },
+      { label: "请假理由", value: state.leave.reason, wrap: true },
+      { label: "附件", value: state.leave.attachment, wrap: true }
+    ];
+  }
+
+  const LEAVE_LINE_HEIGHT = 27;
+  const LEAVE_TOP_PADDING = 60;
+  const LEAVE_BOTTOM_PADDING = 24;
+
+  function measureLeaveLayout() {
+    let totalLines = 0;
+    const rows = getLeaveRows().map((row) => {
+      setFont(17, 400);
+      const label = row.label + "：";
+      const labelWidth = ctx.measureText(label).width;
+      const valueX = 18 + labelWidth + 8;
+      const availableWidth = CANVAS_W - 18 - valueX;
+      let lines;
+      if (row.wrap) {
+        lines = wrapText(row.value, availableWidth);
+      } else {
+        const value = String(row.value ?? "");
+        let size = 17;
+        setFont(size, 400);
+        while (size > 13 && ctx.measureText(value).width > availableWidth) {
+          size -= 0.5;
+          setFont(size, 400);
+        }
+        lines = [ellipsizeToWidth(value, availableWidth)];
+      }
+      if (!lines.length) lines = [""];
+      totalLines += Math.max(1, lines.length);
+      return { ...row, label, valueX, lines };
+    });
+    const height = LEAVE_TOP_PADDING + totalLines * LEAVE_LINE_HEIGHT + LEAVE_BOTTOM_PADDING;
+    return { rows, height };
+  }
+
+  function drawLeaveCard(layout) {
+    ctx.fillStyle = COLORS.card;
+    ctx.fillRect(0, LEAVE_CARD_Y, CANVAS_W, layout.height);
+    drawSectionHeader(LEAVE_CARD_Y + 22, "请假信息（新）", "", {
+      y: LEAVE_CARD_Y + 20,
+      width: 3.5,
+      height: 22,
+      radius: 1.75
+    });
+
+    let lineTop = LEAVE_CARD_Y + LEAVE_TOP_PADDING;
+    layout.rows.forEach((row) => {
+      const centerY = lineTop + LEAVE_LINE_HEIGHT / 2;
+
+      drawText(row.label, 18, centerY, {
+        size: 17,
+        color: COLORS.leaveLabel
+      });
+
+      row.lines.forEach((line, i) => {
+        if (!line) return;
+        drawText(line, row.valueX, centerY + i * LEAVE_LINE_HEIGHT, {
+          size: 17,
+          color: COLORS.leaveValue
+        });
+      });
+
+      lineTop += Math.max(1, row.lines.length) * LEAVE_LINE_HEIGHT;
+    });
+  }
+
+  function drawCheckCircle(centerX, centerY) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 10.5, 0, Math.PI * 2);
+    ctx.fillStyle = COLORS.card;
+    ctx.fill();
+    ctx.strokeStyle = COLORS.blue;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(centerX - 4.8, centerY + 0.2);
+    ctx.lineTo(centerX - 1.1, centerY + 4);
+    ctx.lineTo(centerX + 5.4, centerY - 4);
+    ctx.strokeStyle = COLORS.blue;
+    ctx.lineWidth = 1.5;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawTimelineStep(y, title, status, time, name) {
+    drawCheckCircle(33, y);
+
+    setFont(17, 600);
+    ctx.fillStyle = COLORS.heading;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText(title, 54, y);
+
+    const titleWidth = ctx.measureText(title).width;
+    if (status) {
+      setFont(17, 400);
+      ctx.fillStyle = COLORS.green;
+      ctx.fillText(status, 54 + titleWidth + 10, y);
+    }
+
+    if (time) {
+      drawText(time, CANVAS_W - 18, y, {
+        size: 14,
+        color: COLORS.time,
+        align: "right"
+      });
+    }
+
+    if (name) {
+      drawText(name, 54, y + 39, {
+        size: 16,
+        color: COLORS.name
+      });
+    }
+  }
+
+  // Layout constants derived from the reference screen proportions.
+  const STUDENT_CARD_HEIGHT = 398;
+  const LEAVE_CARD_Y = STUDENT_CARD_HEIGHT + 24;
+  const SECTION_GAP = 24;
+
+  function drawProgressCard(cardY) {
+    ctx.fillStyle = COLORS.card;
+    ctx.fillRect(0, cardY, CANVAS_W, CANVAS_H - cardY);
+    drawSectionHeader(cardY + 22, "办理进度", "查看流程图");
+
+    const firstY = cardY + 82;
+    const secondY = firstY + 88;
+    const applicantName = state.student.name || "";
+
+    // Timeline connector, matching the cropped reference screen.
+    ctx.save();
+    ctx.beginPath();
+    ctx.strokeStyle = COLORS.blue;
+    ctx.lineWidth = 1.4;
+    ctx.moveTo(33, firstY + 11);
+    ctx.lineTo(33, secondY - 11);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(33, secondY + 11);
+    ctx.lineTo(33, CANVAS_H);
+    ctx.stroke();
+    ctx.restore();
+
+    drawTimelineStep(
+      firstY,
+      "申请",
+      "申请",
+      state.progress.applicationTime,
+      applicantName
+    );
+
+    drawTimelineStep(
+      secondY,
+      state.progress.reviewerTitle || "班主任审核",
+      state.progress.reviewerStatus || "",
+      state.progress.reviewerTime,
+      state.progress.reviewerName
+    );
+  }
+
+  function draw() {
+    const layout = measureLeaveLayout();
+    const progressCardY = LEAVE_CARD_Y + layout.height + SECTION_GAP;
+
+    ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
+    ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+
+    ctx.fillStyle = COLORS.background;
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+    drawStudentCard();
+    drawLeaveCard(layout);
+    if (progressCardY < CANVAS_H) {
+      drawProgressCard(progressCardY);
+    }
+  }
+
+  // ---------- responsive canvas profile ----------
+
+  function getDesktopProfile() {
+    return {
+      pixelWidth: DESKTOP_PIXEL_WIDTH,
+      pixelHeight: DESKTOP_PIXEL_HEIGHT,
+      scale: 2,
+      canvasHeight: BASE_CANVAS_H,
+      adaptive: false
+    };
+  }
+
+  function getCanvasProfile() {
+    const mobileLayout = window.matchMedia("(max-width: 860px)").matches;
+    if (!mobileLayout) return getDesktopProfile();
+
+    const screenWidth = Math.round(Number(window.screen && window.screen.width) || 0);
+    const screenHeight = Math.round(Number(window.screen && window.screen.height) || 0);
+    const isPhoneSizedScreen =
+      screenWidth >= 280 &&
+      screenWidth <= 900 &&
+      screenHeight >= 480 &&
+      screenHeight / screenWidth >= 1.65;
+
+    // Desktop browsers resized to a narrow window keep the standard phone output.
+    if (!isPhoneSizedScreen) return getDesktopProfile();
+
+    const dpr = Math.min(3, Math.max(2, Number(window.devicePixelRatio) || 2));
+    const pixelWidth = Math.round(screenWidth * dpr);
+    const pixelHeight = Math.round(screenHeight * dpr);
+    const scale = pixelWidth / CANVAS_W;
+
+    return {
+      pixelWidth,
+      pixelHeight,
+      scale,
+      canvasHeight: pixelHeight / scale,
+      adaptive: true
+    };
+  }
+
+  function applyCanvasProfile(profile) {
+    const key = `${profile.pixelWidth}x${profile.pixelHeight}`;
+    if (key === activeCanvasProfileKey) return false;
+    activeCanvasProfileKey = key;
+
+    CANVAS_H = profile.canvasHeight;
+    SCALE = profile.scale;
+
+    if (canvas.width !== profile.pixelWidth || canvas.height !== profile.pixelHeight) {
+      canvas.width = profile.pixelWidth;
+      canvas.height = profile.pixelHeight;
+    }
+
+    const ratio = profile.pixelWidth / profile.pixelHeight;
+    document.documentElement.style.setProperty("--shot-ratio", ratio.toFixed(8));
+    document.documentElement.style.setProperty(
+      "--shot-aspect",
+      `${profile.pixelWidth} / ${profile.pixelHeight}`
+    );
+
+    const sizeText = `${profile.pixelWidth} × ${profile.pixelHeight} px`;
+    if (sizeChip) sizeChip.textContent = sizeText;
+    if (exportSize) exportSize.textContent = sizeText;
+    if (mobileExportSize) mobileExportSize.textContent = sizeText;
+
+    return true;
+  }
+
+  function refreshCanvasProfile() {
+    if (applyCanvasProfile(getCanvasProfile())) {
+      draw();
+    }
+  }
+
+  // ---------- mobile view tabs ----------
+
+  const mobileTabButtons = Array.from(document.querySelectorAll("[data-mobile-tab]"));
+
+  function setMobileView(view) {
+    const nextView = view === "preview" ? "preview" : "edit";
+    document.body.dataset.mobileView = nextView;
+
+    mobileTabButtons.forEach((button) => {
+      const isActive = button.dataset.mobileTab === nextView;
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-selected", String(isActive));
+      button.tabIndex = isActive ? 0 : -1;
+    });
+
+    if (nextView === "preview" && applyCanvasProfile(getCanvasProfile())) {
+      draw();
+    }
+  }
+
+  mobileTabButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      setMobileView(button.dataset.mobileTab);
+    });
+  });
+
+  let resizeTimer = 0;
+  let lastViewportWidth = window.innerWidth;
+
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(() => {
+      const nextWidth = window.innerWidth;
+      if (Math.abs(nextWidth - lastViewportWidth) <= 2) return;
+      lastViewportWidth = nextWidth;
+      refreshCanvasProfile();
+    }, 250);
+  });
+
+  window.addEventListener("orientationchange", () => {
+    window.setTimeout(() => {
+      lastViewportWidth = window.innerWidth;
+      refreshCanvasProfile();
+    }, 320);
+  });
+
+  // ---------- form binding ----------
+
+  function syncFormFromState() {
+    editorForm.querySelectorAll("[data-bind]").forEach((el) => {
+      const value = getByPath(state, el.dataset.bind);
+      el.value = value == null ? "" : value;
+    });
+  }
+
+  function requestRender() {
+    if (renderQueued) return;
+    renderQueued = true;
+    requestAnimationFrame(() => {
+      renderQueued = false;
+      draw();
+    });
+  }
+
+  function updateAutoDurationField() {
+    state.leave.duration = calculateDurationText(state.leave.start, state.leave.end) || "—";
+    const durationInput = editorForm.querySelector('[data-bind="leave.duration"]');
+    if (durationInput) durationInput.value = state.leave.duration;
+  }
+
+  function applyFormValue(target) {
+    const path = target.dataset.bind;
+    if (!path) return;
+    setByPath(state, path, target.value);
+    if (path === "leave.start" || path === "leave.end") {
+      updateAutoDurationField();
+    }
+    requestRender();
+  }
+
+  editorForm.addEventListener("input", (event) => {
+    applyFormValue(event.target);
+  });
+
+  editorForm.addEventListener("change", (event) => {
+    applyFormValue(event.target);
+  });
+
+  function resetState() {
+    state = buildDefaultState();
+    syncFormFromState();
+    updateAutoDurationField();
+    draw();
+    showToast("已重置，并按系统日期重新生成默认时间");
+  }
+
+  document.querySelectorAll('[data-action="reset"]').forEach((button) => {
+    button.addEventListener("click", resetState);
+  });
+
+  function parseDateTime(value) {
+    const match = String(value || "").trim().match(
+      /^(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?$/
+    );
+    if (!match) return null;
+    const [, year, month, day, hour, minute, second] = match;
+    const date = new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute),
+      Number(second || 0)
+    );
+    if (
+      date.getFullYear() !== Number(year) ||
+      date.getMonth() !== Number(month) - 1 ||
+      date.getDate() !== Number(day) ||
+      date.getHours() !== Number(hour) ||
+      date.getMinutes() !== Number(minute)
+    ) {
+      return null;
+    }
+    return date;
+  }
+
+  function formatDuration(totalMinutes) {
+    // Only the hour unit is shown on the generated page.
+    const hours = Math.max(1, Math.round(totalMinutes / 60));
+    return `${hours}小时`;
+  }
+
+  // ---------- export ----------
+
+  function showToast(message) {
+    clearTimeout(toastTimer);
+    toast.textContent = message;
+    toast.classList.add("show");
+    toastTimer = window.setTimeout(() => {
+      toast.classList.remove("show");
+    }, 2200);
+  }
+
+  function canvasToBlob() {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error("无法生成图片"));
+      }, "image/png");
+    });
+  }
+
+  async function downloadPng() {
+    try {
+      const blob = await canvasToBlob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = "请假申请截图.png";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+      showToast(`PNG 已生成（${canvas.width} × ${canvas.height}）`);
+    } catch (error) {
+      showToast("图片生成失败，请使用最新版 Chrome 或 Edge 打开");
+    }
+  }
+
+  document.querySelectorAll('[data-action="download"]').forEach((button) => {
+    button.addEventListener("click", downloadPng);
+  });
+
+  document.querySelectorAll('[data-action="copy"]').forEach((button) => {
+    button.addEventListener("click", async () => {
+      try {
+        if (!navigator.clipboard || !window.ClipboardItem) {
+          throw new Error("unsupported");
+        }
+        const blob = await canvasToBlob();
+        await navigator.clipboard.write([
+          new ClipboardItem({ "image/png": blob })
+        ]);
+        showToast("图片已复制到剪贴板");
+      } catch (error) {
+        showToast("当前浏览器不支持复制图片，请使用“下载 PNG”");
+      }
+    });
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+      event.preventDefault();
+      downloadPng();
+    }
+  });
+
+  // ---------- boot ----------
+
+  applyCanvasProfile(getCanvasProfile());
+  setMobileView("edit");
+  syncFormFromState();
+  updateAutoDurationField();
+  draw();
+})();
+</script>
+</body>
+</html>
